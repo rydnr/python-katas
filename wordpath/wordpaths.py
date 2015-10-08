@@ -1,19 +1,60 @@
 import os.path
 import sys
 
+class UF:
+    def __init__(self, count):
+        self.__Id = [ i for i in range(count) ]
+        self.__Sz = [ 1 for i in range(count) ]
+
+    def count(self):
+        return self.__Count
+
+    def connected(self, p, q):
+        return self.find(p) == self.find(q)
+
+    def find(self, p):
+        aux=p
+        while self.__Id[aux] != aux:
+            aux = self.__Id[aux]
+        return aux
+
+    def quick_union(self, p, q):
+        i=self.find(p)
+        j=self.find(q)
+        if (i != j):
+            self.__Id[i] = j
+
+    def weighted_union(self, p, q):
+        i=self.find(p)
+        j=self.find(q)
+        if (i != j):
+            if (self.__Sz[i] < self.__Sz[j]):
+                self.__Id[i] = j
+                self.__Sz[j] += self.__Sz[i]
+            else:
+                self.__Id[j] = i
+                self.__Sz[i] += self.__Sz[j]
+
+    def union(self, p, q):
+        self.weighted_union(p, q)
+
+    def subtree(self, p):
+        root=self.find(p)
+        return [ i for i in range(len(self.__Id)) if self.find(i) == root ]
+
 class Wordpath:
     def __init__(self, wordfile, withintest=False):
         r"""
         Constructs a new instance.
         >>> w=Wordpath("/usr/share/dict/words")
 
-        >>> w=Wordpath("/tmp/nothing", False)
+        >>> w=Wordpath("/tmp/nothing")
         Traceback (most recent call last):
         ValueError: /tmp/nothing does not exist
 
         To test for empty files, execute this on a shell:
         $ touch /tmp/empty
-        >>> w=Wordpath("/tmp/empty", False)
+        >>> w=Wordpath("/tmp/empty")
         Traceback (most recent call last):
         ValueError: /tmp/empty is empty
         """
@@ -83,32 +124,6 @@ class Wordpath:
         """
         return [ w for w in wordlist if word != w and len(word) == len(w) and self._hamming_distance(word, w) == distance ]
 
-    def __find_intermediates_bruteforce(self, origin, destination, wordlist):
-        result=[]
-        stack=[]
-        found=False
-        remaining=[]
-        nextround=[origin]
-        toskip=[]
-        while not found:
-            for root in nextround:
-                remaining=[ w for w in self._those_at_distance(root, wordlist, 1) if w != origin ]
-                nextround=[]
-                for word in remaining:
-                    if word == destination:
-                        found=True
-                        result=stack
-                        break
-                    elif word in stack:
-                        stack=stack[:stack.index(word)]
-                    else:
-                        stack.append(word)
-#                        print_path(stack)
-                        nextround.append(word)
-                toskip.append(root)
-            
-        return result
-
     def __find_intermediates_recursively(self, origin, destination, wordlist, inprocess=[]):
         result=[]
         candidates=self._those_at_distance(origin, [ node for node in wordlist if node not in inprocess ], 1)
@@ -126,33 +141,35 @@ class Wordpath:
                     inprocess.remove(candidate)
         return result
 
-    def _find_intermediates(self, origin, destination, wordlist):
-        r"""
-        Finds the intermediates from origin to destination, using words in wordlist.
-        >>> words=["real","rain","coal","feal","foal","foul","foud","fear","fast","loud"]
-        >>> Wordpath(None, True)._find_intermediates("rial", "foud", words)
-        ['real', 'feal', 'foal', 'foul']
-        >>> words=["bitt", "butt", "burt", "bert", "berm", "berm", "germ", "geum", "meum", "jina", "pina", "pint", "pent", "peat", "prat", "pray"]
-        >>> Wordpath(None, True)._find_intermediates("bitt", "meum", words)
-        ['butt', 'burt', 'bert', 'berm', 'germ', 'geum']
-        """
-#        return self.__find_intermediates_recursively(origin, destination, wordlist)
-        return self.__find_intermediates_bruteforce(origin, destination, wordlist)
-    
     def find_word_path(self, origin, destination):
-        r"""
-        Finds the intermediates from origin to destination, using words in wordlist.
-        >>> Wordpath("/usr/share/dict/words").find_word_path("rial", "foud")
-        ['rial', 'real', 'feal', 'foal', 'foul', 'foud']
-        """
+        lst=[]
+        indexes={}
+        i=0
+        subset=[ word for word in self.__Words if len(word) == len(origin) ]
+        count=len(subset)
+        uf=UF(count)
+        for w in subset:
+            indexes[w]=i
+            lst.append(w)
+            i+=1
+        i=0
+        print("Building algorithm data structures...", end="")
+        sys.stdout.flush()
+        for w in subset:
+            i+=1
+            for close_match in self._those_at_distance(w, subset, 1):
+                uf.union(indexes[w], indexes[close_match])
+        print("done")
+        print("Retrieving the list of potential words...", end="")
+        sys.stdout.flush()
+        subsubset=[ lst[j] for j in uf.subtree(indexes[origin]) ]
+        print("done")
+        print("%d out of %d words. Finding a possible path..." % (len(subsubset), count), end="")
         result=[]
-        if len(origin) == len(destination):
-            words=[ w for w in self.__Words if len(w) == len(origin) ]
-            aux=self._find_intermediates(origin, destination, words)
-            if len(aux) > 0:
-                result.append(origin)
-                [ result.append(x) for x in aux ]
-                result.append(destination)
+        result.append(origin)
+        result.extend(self.__find_intermediates_recursively(origin, destination, subsubset))
+        result.append(destination)
+        print("done")
         return result
 
 def print_path(wordpath):
