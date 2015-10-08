@@ -83,6 +83,49 @@ class Wordpath:
         """
         return [ w for w in wordlist if word != w and len(word) == len(w) and self._hamming_distance(word, w) == distance ]
 
+    def __find_intermediates_bruteforce(self, origin, destination, wordlist):
+        result=[]
+        stack=[]
+        found=False
+        remaining=[]
+        nextround=[origin]
+        toskip=[]
+        while not found:
+            for root in nextround:
+                remaining=[ w for w in self._those_at_distance(root, wordlist, 1) if w != origin ]
+                nextround=[]
+                for word in remaining:
+                    if word == destination:
+                        found=True
+                        result=stack
+                        break
+                    elif word in stack:
+                        stack=stack[:stack.index(word)]
+                    else:
+                        stack.append(word)
+#                        print_path(stack)
+                        nextround.append(word)
+                toskip.append(root)
+            
+        return result
+
+    def __find_intermediates_recursively(self, origin, destination, wordlist, inprocess=[]):
+        result=[]
+        candidates=self._those_at_distance(origin, [ node for node in wordlist if node not in inprocess ], 1)
+        for candidate in candidates:
+            if candidate == destination:
+                result.append(candidate)
+                break
+            else:
+                inprocess.append(candidate)
+                aux=self.__find_intermediates_recursively(candidate, destination, wordlist, inprocess)
+                if len(aux) > 0:
+                    result=list(inprocess)
+                    break
+                else:
+                    inprocess.remove(candidate)
+        return result
+
     def _find_intermediates(self, origin, destination, wordlist):
         r"""
         Finds the intermediates from origin to destination, using words in wordlist.
@@ -93,25 +136,9 @@ class Wordpath:
         >>> Wordpath(None, True)._find_intermediates("bitt", "meum", words)
         ['butt', 'burt', 'bert', 'berm', 'germ', 'geum']
         """
-        return self._find_intermediates_recur(origin, destination, wordlist, [])
-
-    def _find_intermediates_recur(self, origin, destination, wordlist, inprocess):
-        result=[]
-        candidates=self._those_at_distance(origin, [ node for node in wordlist if node not in inprocess ], 1)
-        for candidate in candidates:
-            if candidate == destination:
-                result.append(candidate)
-                break
-            else:
-                inprocess.append(candidate)
-                aux=self._find_intermediates_recur(candidate, destination, wordlist, inprocess)
-                if len(aux) > 0:
-                    result=list(inprocess)
-                    break
-                else:
-                    inprocess.remove(candidate)
-        return result
-
+#        return self.__find_intermediates_recursively(origin, destination, wordlist)
+        return self.__find_intermediates_bruteforce(origin, destination, wordlist)
+    
     def find_word_path(self, origin, destination):
         r"""
         Finds the intermediates from origin to destination, using words in wordlist.
