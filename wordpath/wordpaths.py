@@ -3,8 +3,77 @@ import sys
 from collections import deque
 
 class Graph:
+    """
+    A graph implemented as a data structure
+    consisting of an array containing the list
+    of adjacents to the vertice associated to
+    that array index.
 
+    Consider this graph.
+                         +--+    +--+
+                         |6 <----|5 |
+                         +--+   >+--+
+                               /   ^
+                              /    |
+                +--+     +--+/    ++-+
+                |1 |<----+0 +---->|4 |
+                +--+     ++-+\    ++-+
+                    \     |   \    ^
+                     \    v    \   |
+                      \ +--+    >+-++
+                       >|2 |     |3 |
+                        +--+     +--+
+
+
+
+
+
+
+   vertice           Adjacents
+               +--------------------------+
+    +--+       | +--+ +--+ +--+ +--+ +--+ |
+    |0-+------>| |1 | |2 | |3 | |4 | |5 | |
+    +--+       | +--+ +--+ +--+ +--+ +--+ |
+               +--------------------------+
+               +------+
+    +--+       | +--+ |
+    |1-+------>| |2 | |
+    +--+       | +--+ |
+               +------+
+               +--+
+    +--+       |  |
+    |2-+------>|  |
+    +--+       |  |
+               +--+
+               +------+
+    +--+       | +--+ |
+    |3-+------>| |4 | |
+    +--+       | +--+ |
+               +------+
+               +------+
+    +--+       | +--+ |
+    |4-+------>| |5 | |
+    +--+       | +--+ |
+               +------+
+               +------+
+    +--+       | +--+ |
+    |5-+------>| |6 | |
+    +--+       | +--+ |
+               +------+
+               +--+
+    +--+       |  |
+    |6-+------>|  |
+    +--+       |  |
+               +--+
+
+    The information about the graph is expected
+    to be provided by calling
+    graph.add_edge(vertice, neighbour).
+    """
     def __init__(self, v):
+        """
+        Initializes the graph structureo
+        """
         self.__V = v
         self.__Adj = []
         for i in range(v):
@@ -12,81 +81,57 @@ class Graph:
         self.__E = 0
 
     def v(self):
+        """
+        Retrieves the number of vertices.
+        """
         return self.__V
 
     def e(self):
+        """
+        Retrieves the number of edges.
+        """
         return self.__E
 
     def add_edge(self, v, w):
+        """
+        Adds a new edge to the graph: a direct
+        connection between two vertices.
+        """
         self.__Adj[v].add(w)
         self.__Adj[w].add(v)
         self.__E += 1
 
     def adj(self, v):
+        """
+        Retrieves the adjacents of a given vertice.
+        """
         return self.__Adj[v]
 
-    def degree(self, v):
-        result=0
-        for w in self.__Adj(v):
-            result+=1
-        return result
-
-    def maxDegree(self):
-        result=0
-        for v in range(self.v()):
-            aux=self.degree(v)
-            if (aux > result):
-                result=aux
-        return result
-
-    def avgDegree(self):
-        return 2*self.g()/self.v()
-
-    def numberOfSelfLoops(self):
-        result=0
-        for v in range(self.v()):
-            for w in self.__Adj(v):
-                if (v == w):
-                    result += 1
-        result=result / 2
-        return result
-
-class DepthFirstPaths:
-    def __init__(self, g, s):
-        self.__Marked = [ False for i in range(g.v()) ]
-        self.__EdgeTo = [ - 1 for i in range(g.v()) ]
-        self.__S = s
-        self.__dfs(g, s)
-
-    def __dfs(self, g, v):
-        self.__Marked[v] = True
-        for w in g.adj(v):
-            if not self.__Marked[w]:
-                self.__EdgeTo[w] = v
-                self.__dfs(g, w)
-
-    def has_path_to(self, v):
-        return self.__Marked[v]
-
-    def path_to(self, v):
-        result=None
-        if self.has_path_to(v):
-            result = []
-            x=v
-            while x != self.__S:
-                result.append(x)
-                x = self.__EdgeTo[x]
-            result.append(self.__S)
-        return result[::-1]
-
 class BreadthFirstPaths:
+    """
+    Algorithm to traverse a graph using a breadth-first
+    approach. It guarantees it finds the shortest path
+    between two connected vertices.
+    Notice that a depth-first approach is limited by
+    the stack size since it's recursive by definition.
+    """
     def __init__(self, g, s):
+        """
+        Initializes the internal structure.
+        """
         self.__Marked = [ False for i in range(g.v()) ]
         self.__EdgeTo = [ - 1 for i in range(g.v()) ]
         self.__S = s
         self.__bfs(g, s)
 
     def __bfs(self, g, s):
+        """
+        Traverses the graph using a FIFO, exhaustively
+        visiting each vertice at the same depth.
+        It keeps track of whether it has already visited
+        a vertice in the __Marked array, and annotates
+        the parent for each node in __EdgeTo.
+        """
         queue=deque()
         self.__Marked[s] = True
         queue.append(s)
@@ -99,9 +144,23 @@ class BreadthFirstPaths:
                     queue.append(w)
 
     def has_path_to(self, v):
+        """
+        Checks whether there's a path
+        from the source vertice to a given node.
+        """
         return self.__Marked[v]
 
     def path_to(self, v):
+        """
+        Retrieves the path from the source to given vertice,
+        if it exists.
+        The process is:
+        - Starting with the destination,
+          use __EdgeTo structure iteratively to find the parent,
+          annotating them,
+          until it reaches the top (source).
+        - Then, reverse the parent vertices found in the process.
+        """
         result=None
         if self.has_path_to(v):
             result = []
@@ -112,7 +171,7 @@ class BreadthFirstPaths:
             result.append(self.__S)
         return result[::-1]
 
-    
+
 class Wordpath:
     def __init__(self, wordfile, withintest=False):
         r"""
@@ -131,12 +190,15 @@ class Wordpath:
         """
         if not withintest:
             if self._file_exists(wordfile):
-                self.__Words = self._read_lines_from_file(wordfile)
+                self.set_words(self._read_lines_from_file(wordfile))
                 if len(self.__Words) == 0:
                     raise ValueError("%s is empty" % wordfile)
             else:
                 raise ValueError("%s does not exist" % wordfile)
-        
+
+    def set_words(self, newList):
+        self.__Words = newList
+
     def _file_exists(self, filepath):
         r"""
         Checks whether the file exists.
@@ -195,24 +257,43 @@ class Wordpath:
         """
         return [ w for w in wordlist if word != w and len(word) == len(w) and self._hamming_distance(word, w) == distance ]
 
-    def __find_intermediates_recursively(self, origin, destination, wordlist, inprocess=[]):
-        result=[]
-        candidates=self._those_at_distance(origin, [ node for node in wordlist if node not in inprocess ], 1)
-        for candidate in candidates:
-            if candidate == destination:
-                result.append(candidate)
-                break
-            else:
-                inprocess.append(candidate)
-                aux=self.__find_intermediates_recursively(candidate, destination, wordlist, inprocess)
-                if len(aux) > 0:
-                    result=list(inprocess)
-                    break
-                else:
-                    inprocess.remove(candidate)
-        return result
-
     def find_word_path(self, origin, destination):
+        r"""
+        Finds the words from the list which, in sequence,
+        transforms the origin into the destination by
+        changing a single character each time (Hamming distance 1).
+        >>> words=["rial", "real", "feal", "foal", "foul", "foud", "dung", "dunt", "dent", "gent", "geet", "geez", "jehu", "jesu", "jest", "gest", "gent", "gena", "guna", "guha", "yagi", "yali", "pali", "palp", "paup", "plup", "blup", "bitt", "butt", "burt", "bert", "berm", "berm", "germ", "geum", "meum", "jina", "pina", "pint", "pent", "peat", "prat", "pray", "fike", "fire", "fare", "care", "carp", "camp" ]
+        >>> wordpath=Wordpath(None, True)
+        >>> wordpath.set_words(words)
+        >>> wordpath.find_word_path("rial", "foud")
+        Building graph ... done
+        Initializing search algorithm ... done
+        ['rial', 'real', 'feal', 'foal', 'foul', 'foud']
+        >>> wordpath.find_word_path("dung", "geez")
+        Building graph ... done
+        Initializing search algorithm ... done
+        ['dung', 'dunt', 'dent', 'gent', 'geet', 'geez']
+        >>> wordpath.find_word_path("jehu", "guha")
+        Building graph ... done
+        Initializing search algorithm ... done
+        ['jehu', 'jesu', 'jest', 'gest', 'gent', 'gena', 'guna', 'guha']
+        >>> wordpath.find_word_path("yagi", "blup")
+        Building graph ... done
+        Initializing search algorithm ... done
+        ['yagi', 'yali', 'pali', 'palp', 'paup', 'plup', 'blup']
+        >>> wordpath.find_word_path("bitt", "meum")
+        Building graph ... done
+        Initializing search algorithm ... done
+        ['bitt', 'butt', 'burt', 'bert', 'berm', 'germ', 'geum', 'meum']
+        >>> wordpath.find_word_path("jina", "pray")
+        Building graph ... done
+        Initializing search algorithm ... done
+        ['jina', 'pina', 'pint', 'pent', 'peat', 'prat', 'pray']
+        >>> wordpath.find_word_path("fike", "camp")
+        Building graph ... done
+        Initializing search algorithm ... done
+        ['fike', 'fire', 'fare', 'care', 'carp', 'camp']
+        """
         lst=[]
         indexes={}
         i=0
@@ -242,7 +323,7 @@ class Wordpath:
             result = None
         else:
             result=[ lst[i] for i in path ]
-            
+
         return result
 
 def print_path(wordpath):
@@ -253,10 +334,22 @@ def print_path(wordpath):
     butt -> burt -> bert -> berm -> germ -> geum
     """
     print(" -> ".join(wordpath))
-    
+
+def usage():
+    result=""""
+Error: Invalid input: Too few or too many arguments.
+
+Usage: wordpaths.py wordfile startword endword
+Where:
+  - wordfile: a file with a list of words, one per line.
+  - startword: the word to start with.
+  - endword: the word to end with.
+"""
+    return result
+
 def main(argv):
     if len(argv) != 4:
-        raise ValueError("Usage: wordpaths.py wordfile startword endword")
+        raise ValueError(usage())
     print_path(Wordpath(argv[1]).find_word_path(argv[2], argv[3]))
 
 if __name__ == "__main__":
