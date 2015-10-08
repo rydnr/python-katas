@@ -1,47 +1,118 @@
 import os.path
 import sys
+from collections import deque
 
-class UF:
-    def __init__(self, count):
-        self.__Id = [ i for i in range(count) ]
-        self.__Sz = [ 1 for i in range(count) ]
+class Graph:
 
-    def count(self):
-        return self.__Count
+    def __init__(self, v):
+        self.__V = v
+        self.__Adj = []
+        for i in range(v):
+            self.__Adj.append(set())
+        self.__E = 0
 
-    def connected(self, p, q):
-        return self.find(p) == self.find(q)
+    def v(self):
+        return self.__V
 
-    def find(self, p):
-        aux=p
-        while self.__Id[aux] != aux:
-            aux = self.__Id[aux]
-        return aux
+    def e(self):
+        return self.__E
 
-    def quick_union(self, p, q):
-        i=self.find(p)
-        j=self.find(q)
-        if (i != j):
-            self.__Id[i] = j
+    def add_edge(self, v, w):
+        self.__Adj[v].add(w)
+        self.__Adj[w].add(v)
+        self.__E += 1
 
-    def weighted_union(self, p, q):
-        i=self.find(p)
-        j=self.find(q)
-        if (i != j):
-            if (self.__Sz[i] < self.__Sz[j]):
-                self.__Id[i] = j
-                self.__Sz[j] += self.__Sz[i]
-            else:
-                self.__Id[j] = i
-                self.__Sz[i] += self.__Sz[j]
+    def adj(self, v):
+        return self.__Adj[v]
 
-    def union(self, p, q):
-        self.weighted_union(p, q)
+    def degree(self, v):
+        result=0
+        for w in self.__Adj(v):
+            result+=1
+        return result
 
-    def subtree(self, p):
-        root=self.find(p)
-        return [ i for i in range(len(self.__Id)) if self.find(i) == root ]
+    def maxDegree(self):
+        result=0
+        for v in range(self.v()):
+            aux=self.degree(v)
+            if (aux > result):
+                result=aux
+        return result
 
+    def avgDegree(self):
+        return 2*self.g()/self.v()
+
+    def numberOfSelfLoops(self):
+        result=0
+        for v in range(self.v()):
+            for w in self.__Adj(v):
+                if (v == w):
+                    result += 1
+        result=result / 2
+        return result
+
+class DepthFirstPaths:
+    def __init__(self, g, s):
+        self.__Marked = [ False for i in range(g.v()) ]
+        self.__EdgeTo = [ - 1 for i in range(g.v()) ]
+        self.__S = s
+        self.__dfs(g, s)
+
+    def __dfs(self, g, v):
+        self.__Marked[v] = True
+        for w in g.adj(v):
+            if not self.__Marked[w]:
+                self.__EdgeTo[w] = v
+                self.__dfs(g, w)
+
+    def has_path_to(self, v):
+        return self.__Marked[v]
+
+    def path_to(self, v):
+        result=None
+        if self.has_path_to(v):
+            result = []
+            x=v
+            while x != self.__S:
+                result.append(x)
+                x = self.__EdgeTo[x]
+            result.append(self.__S)
+        return result[::-1]
+
+class BreadthFirstPaths:
+    def __init__(self, g, s):
+        self.__Marked = [ False for i in range(g.v()) ]
+        self.__EdgeTo = [ - 1 for i in range(g.v()) ]
+        self.__S = s
+        self.__bfs(g, s)
+
+    def __bfs(self, g, s):
+        queue=deque()
+        self.__Marked[s] = True
+        queue.append(s)
+        while not len(queue) == 0:
+            v = queue.popleft()
+            for w in g.adj(v):
+                if not self.__Marked[w]:
+                    self.__EdgeTo[w] = v
+                    self.__Marked[w] = True
+                    queue.append(w)
+
+    def has_path_to(self, v):
+        return self.__Marked[v]
+
+    def path_to(self, v):
+        result=None
+        if self.has_path_to(v):
+            result = []
+            x=v
+            while x != self.__S:
+                result.append(x)
+                x = self.__EdgeTo[x]
+            result.append(self.__S)
+        return result[::-1]
+
+    
 class Wordpath:
     def __init__(self, wordfile, withintest=False):
         r"""
@@ -147,29 +218,31 @@ class Wordpath:
         i=0
         subset=[ word for word in self.__Words if len(word) == len(origin) ]
         count=len(subset)
-        uf=UF(count)
+        graph=Graph(count)
         for w in subset:
             indexes[w]=i
             lst.append(w)
             i+=1
         i=0
-        print("Building algorithm data structures...", end="")
+        print("Building graph ... ", end="")
         sys.stdout.flush()
         for w in subset:
             i+=1
             for close_match in self._those_at_distance(w, subset, 1):
-                uf.union(indexes[w], indexes[close_match])
+                graph.add_edge(indexes[w], indexes[close_match])
         print("done")
-        print("Retrieving the list of potential words...", end="")
         sys.stdout.flush()
-        subsubset=[ lst[j] for j in uf.subtree(indexes[origin]) ]
+        print("Initializing search algorithm ... ", end="")
+        searchAlgorithm=BreadthFirstPaths(graph, indexes[origin])
         print("done")
-        print("%d out of %d words. Finding a possible path..." % (len(subsubset), count), end="")
-        result=[]
-        result.append(origin)
-        result.extend(self.__find_intermediates_recursively(origin, destination, subsubset))
-        result.append(destination)
-        print("done")
+        sys.stdout.flush()
+        path=searchAlgorithm.path_to(indexes[destination])
+        if path == None:
+            print("No path from %s to %s" % (origin, destination))
+            result = None
+        else:
+            result=[ lst[i] for i in path ]
+            
         return result
 
 def print_path(wordpath):
